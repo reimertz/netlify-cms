@@ -132,20 +132,39 @@ export function applyDefaults(config) {
 
           const files = collection.get('files');
           if (files) {
+            const isI18n = !isEmpty(locales) && collection.get('i18n_structure');
+            const identifier_field = selectIdentifier(collection);
+
             collection = collection.delete('nested');
             collection = collection.delete('meta');
             collection = collection.set(
               'files',
               files.map(file => {
+                const fields = file.get('fields');
+
                 file = file.set('file', trimStart(file.get('file'), '/'));
                 file = setDefaultPublicFolder(file);
                 file = file.set(
                   'fields',
-                  traverseFields(file.get('fields'), setDefaultPublicFolder),
+                  isI18n
+                    ? addLocaleFields(traverseFields(fields, setDefaultPublicFolder), locales)
+                    : traverseFields(fields, setDefaultPublicFolder),
                 );
+
                 return file;
               }),
             );
+            if (!isEmpty(locales) && collection.get('i18n_structure')) {
+              if (!collection.get('default_locale')) {
+                collection = collection.set('default_locale', locales[0]);
+              } else {
+                locales = uniq([collection.get('default_locale'), ...locales]);
+              }
+              // add identifier config
+              collection = collection.set('identifier_field', `${locales[0]}.${identifier_field}`);
+
+              collection = collection.set('locales', fromJS(locales));
+            }
           }
 
           if (!collection.has('sortableFields')) {

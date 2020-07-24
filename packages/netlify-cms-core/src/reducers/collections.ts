@@ -523,15 +523,32 @@ export const duplicateFields = (collection: Collection, values: any) => {
   const data = values.toJS();
   const locales = collection.get('locales') as List<string>;
   const defaultLocale = collection.get('default_locale') as string;
-  const paths = selectDuplicateFieldPaths(values, List([collection.get('fields').first()]));
-  paths.forEach((path: string) => {
-    const duplicateValue = get(data, path);
-    if (duplicateValue) {
-      locales.shift().forEach(l => {
-        set(data, `${l}${path.substring(defaultLocale.length)}`, duplicateValue);
-      });
-    }
-  });
+
+  if (collection.get('type') === FOLDER) {
+    const paths = selectDuplicateFieldPaths(values, List([collection.get('fields').first()]));
+    paths.forEach((path: string) => {
+      const duplicateValue = get(data, path);
+      if (duplicateValue) {
+        locales.shift().forEach(l => {
+          set(data, `${l}${path.substring(defaultLocale.length)}`, duplicateValue);
+        });
+      }
+    });
+  } else {
+    collection.get('files')?.forEach(file => {
+      if (file) {
+        const paths = selectDuplicateFieldPaths(values, List([file.get('fields').first()]));
+        paths.forEach((path: string) => {
+          const duplicateValue = get(data, path);
+          if (duplicateValue) {
+            locales.shift().forEach(l => {
+              set(data, `${l}${path.substring(defaultLocale.length)}`, duplicateValue);
+            });
+          }
+        });
+      }
+    });
+  }
 
   return fromJS(data);
 };
